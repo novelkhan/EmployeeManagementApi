@@ -25,14 +25,12 @@ namespace EmployeeManagementApi.Controllers
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue($"application/{format.ToLower()}"));
             client.DefaultRequestHeaders.Add("User-Agent", "ASP.NET Core");
 
-            // Windows Authentication এর জন্য ক্রেডেনশিয়াল
             var handler = new HttpClientHandler
             {
                 UseDefaultCredentials = true // Windows Authentication
             };
             client = new HttpClient(handler);
 
-            // সঠিক SSRS URL
             var reportServerUrl = $"http://novel_laptop/ReportServer?/EmployeeReports/{reportName}&rs:Command=Render&rs:Format={format}";
             var response = await client.GetAsync(reportServerUrl);
 
@@ -40,6 +38,32 @@ namespace EmployeeManagementApi.Controllers
             {
                 var content = await response.Content.ReadAsByteArrayAsync();
                 return File(content, $"application/{format.ToLower()}", $"{reportName}.{format.ToLower()}");
+            }
+
+            return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
+        }
+
+        [AllowAnonymous] // টেস্টিংয়ের জন্য
+        [HttpGet("preview")]
+        public async Task<IActionResult> PreviewReport(string reportName = "EmployeeListReport")
+        {
+            var client = _httpClientFactory.CreateClient();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/pdf"));
+            client.DefaultRequestHeaders.Add("User-Agent", "ASP.NET Core");
+
+            var handler = new HttpClientHandler
+            {
+                UseDefaultCredentials = true // Windows Authentication
+            };
+            client = new HttpClient(handler);
+
+            var reportServerUrl = $"http://novel_laptop/ReportServer?/EmployeeReports/{reportName}&rs:Command=Render&rs:Format=PDF";
+            var response = await client.GetAsync(reportServerUrl);
+
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsByteArrayAsync();
+                return File(content, "application/pdf"); // প্রিভিউয়ের জন্য ডাউনলোড ফাইল নাম ছাড়া
             }
 
             return StatusCode((int)response.StatusCode, await response.Content.ReadAsStringAsync());
